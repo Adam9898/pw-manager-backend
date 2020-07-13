@@ -4,12 +4,18 @@ import { app } from "../app";
 import { debug } from "debug";
 import * as http from "http";
 import {HttpError} from "http-errors";
+import {MongoDBConnector} from "../repositories/MongoDBConnector";
+import dotenv from 'dotenv';
+import Jasmine from "jasmine";
+import {monitorEventLoopDelay} from "perf_hooks";
+import {Db} from "mongodb";
 
 /**
  * Module dependencies.
  */
 
 const resolvedDebug = debug('wp-manager-backend:server');
+dotenv.config();
 
 /**
  * Get port from environment and store in Express.
@@ -61,7 +67,7 @@ function onError(error: HttpError) {
         throw error;
     }
 
-    var bind = typeof port === 'string'
+    const bind = typeof port === 'string'
         ? 'Pipe ' + port
         : 'Port ' + port;
 
@@ -90,4 +96,31 @@ function onListening() {
         ? 'pipe ' + addr
         : 'port ' + addr?.port;
     resolvedDebug('Listening on ' + bind);
+
+    if (process.argv[2] === '--test') {
+        // connect to test database
+        const mongodb = new MongoDBConnector(process.env.MONGO_USER!, process.env.MONGO_PASSWORD!, process.env.MONGO_HOST!,
+            parseInt(process.env.MONGO_PORT!), process.env.MONGO_TEST_DB!)
+        mongodb.connect(true).then(() => {
+        // run tests
+        const jasmine = new Jasmine({});
+            jasmine.loadConfig({
+                    "spec_dir": "spec",
+                    "spec_files": [
+                        "**/*[sS]pec.js"
+                    ],
+                    "stopSpecOnExpectationFailure": false,
+                    "random": true
+                }
+            );
+            jasmine.execute();
+
+        });
+    } else {
+        // connect to regular database
+        const mongodb = new MongoDBConnector(process.env.MONGO_USER!, process.env.MONGO_PASSWORD!, process.env.MONGO_HOST!,
+            parseInt(process.env.MONGO_PORT!), process.env.MONGO_DB!)
+        mongodb.connect(true);
+    }
+
 }
