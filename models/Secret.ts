@@ -21,16 +21,11 @@ export class Secret {
     @IsNotEmpty()
     password: string;
 
-    @IsNotEmptyObject()
-    @IsNotEmpty()
-    user: User;
 
-
-    constructor(name: string, username: string, password: string, user: User, id?: string) {
+    constructor(name: string, username: string, password: string, id?: string) {
         this.id = id;
         this.name = name;
         this.username = username;
         this.password = password;
-        this.user = user;
     }
 }

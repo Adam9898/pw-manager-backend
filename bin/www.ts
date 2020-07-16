@@ -110,7 +110,7 @@ function onListening() {
                         "**/*[sS]pec.js"
                     ],
                     "stopSpecOnExpectationFailure": false,
-                    "random": true
+                    "random": false
                 }
             );
             jasmine.execute();

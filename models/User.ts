@@ -1,4 +1,4 @@
-import {IsEmail, IsNotEmpty, MaxLength, MinLength} from "class-validator";
+import {IsEmail, IsNotEmpty, MaxLength} from "class-validator";
 import {Role} from "../enums/Role";
 
 export class User {
@@ -10,8 +10,6 @@ export class User {
     @IsNotEmpty()
     email: string;
 
-    @MaxLength(40)
-    @MinLength(8)
     @IsNotEmpty()
     private _password: string;
 
@@ -27,12 +25,7 @@ export class User {
 
     roles = new Set<Role>();
 
-    /**
-     * @param password
-     * setter method that hashes the password
-     */
     set password(password: string) {
-        // todo crypto
         this._password = password;
     }
 }
