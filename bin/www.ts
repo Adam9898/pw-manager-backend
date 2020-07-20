@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { app } from "../app";
 import { debug } from "debug";
 import * as http from "http";
 import {HttpError} from "http-errors";
@@ -9,6 +8,8 @@ import dotenv from 'dotenv';
 import Jasmine from "jasmine";
 import {monitorEventLoopDelay} from "perf_hooks";
 import {Db} from "mongodb";
+import {Server} from "http";
+import {Express} from "express";
 
 /**
  * Module dependencies.
@@ -16,27 +17,47 @@ import {Db} from "mongodb";
 
 const resolvedDebug = debug('wp-manager-backend:server');
 dotenv.config();
-
+let app: Express;
 /**
  * Get port from environment and store in Express.
  */
 
 const port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+
+
+/**
+ * Connect to database
+ */
+async function connectToDb() {
+    if (process.argv[2] === '--test') {
+        // connect to test database
+        const mongodb = new MongoDBConnector(process.env.MONGO_USER!, process.env.MONGO_PASSWORD!, process.env.MONGO_HOST!,
+            parseInt(process.env.MONGO_PORT!), process.env.MONGO_TEST_DB!)
+        await mongodb.connect(true);
+    } else {
+        // connect to regular database
+        const mongodb = new MongoDBConnector(process.env.MONGO_USER!, process.env.MONGO_PASSWORD!, process.env.MONGO_HOST!,
+            parseInt(process.env.MONGO_PORT!), process.env.MONGO_DB!)
+        await mongodb.connect(true);
+    }
+    app = (await import('../app')).app;
+}
 
 /**
  * Create HTTP server.
  */
-
-const server = http.createServer(app);
+let server: Server;
+connectToDb().then(() => {
+    app.set('port', port);
+    server = http.createServer(app);
+    server.listen(port);
+    server.on('error', onError);
+    server.on('listening', onListening);
+});
 
 /**
  * Listen on provided port, on all network interfaces.
  */
-
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
 
 /**
  * Normalize a port into a number, string, or false.
@@ -98,29 +119,17 @@ function onListening() {
     resolvedDebug('Listening on ' + bind);
 
     if (process.argv[2] === '--test') {
-        // connect to test database
-        const mongodb = new MongoDBConnector(process.env.MONGO_USER!, process.env.MONGO_PASSWORD!, process.env.MONGO_HOST!,
-            parseInt(process.env.MONGO_PORT!), process.env.MONGO_TEST_DB!)
-        mongodb.connect(true).then(() => {
         // run tests
         const jasmine = new Jasmine({});
-            jasmine.loadConfig({
-                    "spec_dir": "spec",
-                    "spec_files": [
-                        "**/*[sS]pec.js"
-                    ],
-                    "stopSpecOnExpectationFailure": false,
-                    "random": false
-                }
-            );
-            jasmine.execute();
-
-        });
-    } else {
-        // connect to regular database
-        const mongodb = new MongoDBConnector(process.env.MONGO_USER!, process.env.MONGO_PASSWORD!, process.env.MONGO_HOST!,
-            parseInt(process.env.MONGO_PORT!), process.env.MONGO_DB!)
-        mongodb.connect(true);
+        jasmine.loadConfig({
+                "spec_dir": "spec",
+                "spec_files": [
+                    "**/*[sS]pec.js"
+                ],
+                "stopSpecOnExpectationFailure": false,
+                "random": false
+            }
+        );
+        jasmine.execute();
     }
-
 }

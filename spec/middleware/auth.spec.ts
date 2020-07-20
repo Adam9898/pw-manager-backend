@@ -35,12 +35,13 @@ describe('an auth middleware group', () => {
         });
     }
 
-    it('should have refreshToken property on the request object after authGuard() is called', async () => {
+    it('should have set a refresh token after authGuard() is called', async () => {
         const request = createModifiedMockRequest();
-        const response = mockResponse();
         request.headers.authorization = jwt;
+        const response = mockResponse();
+        const spy = spyOn(response, 'set')
         await authGuard(request, response, () => {});
-        expect((request as any).refreshToken).toBeDefined();
+        expect(spy).toHaveBeenCalledWith('pw-manager-refresh-token', jwt);
     });
 
     it('should have user property on the request object after authGuard() is called', async () => {
@@ -59,7 +60,7 @@ describe('an auth middleware group', () => {
         expect((request as any).user).toBeInstanceOf(User);
     });
 
-    it('should should call next() after authGuard() is called', async () => {
+    it('should call next() after authGuard() is called', async () => {
         const request = createModifiedMockRequest();
         const response = mockResponse();
         request.headers.authorization = jwt;
@@ -107,17 +108,29 @@ describe('an auth middleware group', () => {
         expect((request as any).refreshToken).toBe(jwt);
     });
 
-    it('should return true when user has the specified role when roleGuard() is called', () => {
+    it('should call next when user has the specified role when roleGuard() is called', () => {
+        const request = mockRequest();
+        const response = mockResponse();
         const testUser = new User('test@test.com', 'test');
         testUser.roles.add(Role.Regular);
-        const result = roleGuard(Role.Regular, testUser);
-        expect(result).toBeTrue();
+        (request as any).user = testUser;
+        const spy = createSpy('next');
+        roleGuard(Role.Regular, request, response, spy);
+        expect(spy).toHaveBeenCalled();
     });
 
-    it('should return false when user doesn\'t have the specified specified role when roleGuard() is called' , () => {
+    it('should send back status code 403 when user doesn\'t have the specified role when roleGuard() is called' , () => {
+        const request = mockRequest();
+        const response = mockResponse();
         const testUser = new User('test@test.com', 'test');
         testUser.roles.add(Role.Regular);
-        const result = roleGuard(Role.Admin, testUser);
-        expect(result).toBeFalse();
+        (request as any).user = testUser;
+        const spyRequest = spyOn(response, 'status');
+        try {
+            roleGuard(Role.Admin, request, response, () => {});
+        } catch (e) {
+            // TypeError: Cannot read property 'send' of undefined. we can ignore this
+        }
+        expect(spyRequest).toHaveBeenCalledWith(401);
     });
 });
