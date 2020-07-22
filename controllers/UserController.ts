@@ -8,8 +8,9 @@ import {SignUpRequest} from "../models/jsonAPI/SignUpRequest";
 import {SignUpResponse} from "../models/jsonAPI/SignUpResponse";
 import {User} from "../models/User";
 import {Role} from "../enums/Role";
-import {validate} from "class-validator";
+import {isEmail, validate} from "class-validator";
 import chalk from "chalk";
+import validator from "validator";
 
 export class UserController implements CrudController {
 
@@ -19,24 +20,27 @@ export class UserController implements CrudController {
     create(req: Request, res: Response): void {
         const signUpRequest: SignUpRequest = req.body;
         let signUpResponse: SignUpResponse = { success: false };
-        this.cryptoService.hashUserPassword(signUpRequest.password).then(hashedPassword => {
-            const user = new User(signUpRequest.email, hashedPassword);
+        this.cryptoService.hashUserPassword(escape(signUpRequest.password)).then(hashedPassword => {
+            const user = new User(validator.escape(signUpRequest.email), hashedPassword);
             user.roles.add(Role.Regular); // register user as regular
             validate(user).then(errors => {
                 if (errors.length > 0) {
+                    // IMPORTANT!! errors contain the user password, in production you never want to log passwords to the console
+                    // In this case, the password is expected to be hashed on the client side, and the project is not meant to be for production
+                    // there are just way too much potential security vulnerabilities in ap app like this, that it needs a comprehensive security audit
                     console.log("user validation failed at registration. errors: ", errors);
-                    res.status(400); // bad request
-                    res.send(signUpResponse);
+                    res.status(400) // bad request
+                    .send(signUpResponse);
                 } else {
                     this.userRepository.insertUser(user).then(id => {
                         signUpResponse.success = true;
                         signUpResponse.token = this.cryptoService.signJsonWebToken(id);
                         console.log(chalk.green('A new user has been registered successfully: ' + id))
-                        res.send(signUpResponse);
+                        res.status(201).send(signUpResponse);
                     }).catch(e => {
                         // the error is probably related to duplicate email
                         console.log(chalk.red(e));
-                        res.send(signUpResponse);
+                        res.status(400).send(signUpResponse);
                     });
                 }
             })
@@ -49,8 +53,8 @@ export class UserController implements CrudController {
     read(req: Request, res: Response): void {
         const loginRequest: LoginRequest = req.body;
         let loginResponse: LoginResponse = { success: false };
-        this.userRepository.getUser(loginRequest.email).then((user) => {
-            this.cryptoService.comparePasswordWithHash(loginRequest.password, user.password).then(match => {
+        this.userRepository.getUser(validator.escape(loginRequest.email)).then((user) => {
+            this.cryptoService.comparePasswordWithHash(validator.escape(loginRequest.password), user.password).then(match => {
                 if (match) {
                     // password is correct
                     loginResponse.success = true;
@@ -73,7 +77,23 @@ export class UserController implements CrudController {
     update(req: Request, res: Response): void {
     }
 
-    checkEmailUniqueness() {
-        // todo check email uniqueness api endpoint
+    /**
+     * Checks whether an email address is already registered by a user, and sends back a json response with a valid
+     * property. If the email is not in use, valid will be true or false if it's used by someone else.
+     * @param req
+     * @param res
+     */
+    checkEmailUniqueness(req: Request, res: Response) {
+        const resJson = {
+            valid: true
+        }
+        const email: string = validator.escape(req.body.email);
+        if (isEmail(email)) {
+            this.userRepository.getUser(email).then(user => resJson.valid = !user)
+            .catch(e => console.log(e))
+            .finally(() => res.send(resJson));
+        } else {
+            res.send(resJson);
+        }
     }
 }

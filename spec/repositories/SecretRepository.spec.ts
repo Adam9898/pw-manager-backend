@@ -37,7 +37,7 @@ describe('a secret repository', () => {
     });
 
     it('should retrieve a secret', async () => {
-        const retrievedSecret = await secretRepository.getSecret(secretHolder._id, user.id!);
+        const retrievedSecret = await secretRepository.getSecret(user.id!, secretHolder._id);
         const secret = new Secret('test-name', 'test-username', 'test-password');
         delete retrievedSecret.id;
         delete secret.id;
@@ -47,7 +47,7 @@ describe('a secret repository', () => {
     it('should insert another secret and retrieve it by id', async () => {
         const secret2 = new Secret('test2', 'test-user2', 'test-password2');
         secretHolder = await secretRepository.insertSecret(secret2, user.id!);
-        const retrievedSecret = await secretRepository.getSecret(secretHolder._id, user.id!);
+        const retrievedSecret = await secretRepository.getSecret(user.id!, secretHolder._id);
         delete secret2.id;
         delete retrievedSecret.id;
         expect(retrievedSecret).toEqual(secret2);

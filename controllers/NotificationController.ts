@@ -3,6 +3,7 @@ import {Notification} from "../models/Notification";
 import {validate} from "class-validator";
 import {Invalid} from "../models/jsonAPI/Invalid";
 import {EventEmitter} from "events";
+import validator from 'validator';
 
 export class NotificationController {
 
@@ -25,7 +26,7 @@ export class NotificationController {
 
 
     send(req: Request, res: Response) {
-        const notification = new Notification((req as any).user.email, req.body.title, req.body.description);
+        const notification = new Notification((req as any).user.email, validator.escape(req.body.title), validator.escape(req.body.description));
         validate(notification).then((error) => {
             if (error.length > 0) {
                 const invalid: Invalid = {

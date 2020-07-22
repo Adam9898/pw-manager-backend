@@ -17,5 +17,4 @@ router.post('/send', authGuard,
 })
 
 
-
-module.exports = router;
+export default router;

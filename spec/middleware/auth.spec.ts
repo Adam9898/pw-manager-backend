@@ -92,20 +92,13 @@ describe('an auth middleware group', () => {
         expect(spy).toHaveBeenCalled();
     });
 
-    it('should add refreshToken property to the request object when jwtRefresher() is called', () => {
+    it('should call set with jwt when jwtRefresher() is called', () => {
         const request = createModifiedMockRequest();
         const response = mockResponse();
         request.headers.authorization = jwt;
-        jwtRefresher(request, response, () => {})
-        expect((request as any).refreshToken).toBeDefined();
-    });
-
-    it('should add refreshToken property with the right value to the request object when jwtRefresher() is called', () => {
-        const request = createModifiedMockRequest();
-        const response = mockResponse();
-        request.headers.authorization = jwt;
-        jwtRefresher(request, response, () => {})
-        expect((request as any).refreshToken).toBe(jwt);
+        const spy = spyOn(response, 'set');
+        jwtRefresher(request, response, () => {});
+        expect(spy).toHaveBeenCalledWith('pw-manager-refresh-token', jwt);
     });
 
     it('should call next when user has the specified role when roleGuard() is called', () => {

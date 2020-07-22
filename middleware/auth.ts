@@ -18,6 +18,7 @@ export const authGuard = async (req: Request, res: Response, next: NextFunction)
     if (decryptedJwt === undefined) {
         console.log(chalk.red('An invalid jwt has been caught!'));
         authFailed(res)
+        return;
     }
     try {
        const user = await userRepository.getUserById(decryptedJwt._id);
@@ -47,7 +48,8 @@ export function jwtRefresher(req: Request, res: Response, next: NextFunction) {
     if (jwt != null) {
         const decryptedJwt: any = cryptoService.verifyJwt(jwt);
         if (decryptedJwt !== undefined) { // verification was successful
-            (req as any).refreshToken = cryptoService.signJsonWebToken(decryptedJwt._id);
+            // attaching a refresh token
+            res.set('pw-manager-refresh-token', cryptoService.signJsonWebToken(decryptedJwt._id));
         } else {
             console.log(chalk.red('An invalid jwt has been caught!'));
             // the middleware will still call next() as the jwtRefresher will only be used on routes that don't require

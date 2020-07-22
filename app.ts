@@ -3,11 +3,12 @@ import express, {NextFunction, Request, Response} from 'express';
 import path from 'path';
 import cookieParser from "cookie-parser";
 import logger from 'morgan';
+import indexRouter from './routes/index';
+import usersRouter from './routes/users';
+import notificationsRouter from './routes/notifications';
+import secretsRouter from './routes/secrets';
+import helmet from "helmet";
 
-
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var notificationsRouter = require('./routes/notifications');
 
 export const app = express();
 
@@ -17,9 +18,20 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(helmet({
+    frameguard: { action: 'deny' },
+    hsts: false,
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"]
+        }
+    }
+}));
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/notifications', notificationsRouter);
+app.use('/secrets', secretsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
