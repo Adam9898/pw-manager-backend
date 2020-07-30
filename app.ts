@@ -8,7 +8,7 @@ import usersRouter from './routes/users';
 import notificationsRouter from './routes/notifications';
 import secretsRouter from './routes/secrets';
 import helmet from "helmet";
-
+import cors from 'cors';
 
 export const app = express();
 
@@ -17,6 +17,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// cors
+app.use(cors());
+app.options('*', cors());
 
 app.use(helmet({
     frameguard: { action: 'deny' },

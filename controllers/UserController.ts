@@ -93,6 +93,7 @@ export class UserController implements CrudController {
             .catch(e => console.log(e))
             .finally(() => res.send(resJson));
         } else {
+            resJson.valid = false;
             res.send(resJson);
         }
     }
